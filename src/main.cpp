@@ -5,9 +5,15 @@
 #include <wx/button.h>
 #include <wx/sizer.h>
 #include <wx/textctrl.h>
+#include <wx/valnum.h>
+#include "modbus_utils.hpp"
+#include "serial_utils.hpp"
+#include <boost/asio.hpp>
+
 
 #include <vector>
 #include <string>
+
 
 #ifdef _WIN32
 #include <windows.h>
@@ -17,6 +23,9 @@
 #include <dirent.h>
 #include <regex>
 #endif
+
+using namespace std;
+using namespace boost::asio;
 
 // สร้างคลาสหลักสำหรับแอปพลิเคชัน
 class MyApp : public wxApp {
@@ -34,8 +43,9 @@ private:
     void OnAboutSoftware(wxCommandEvent& event); // ฟังก์ชันสำหรับจัดการคลิกเมนู About
 
     void OnComportSettings(wxCommandEvent& event); // ฟังก์ชันสำหรับจัดการคลิกเมนู Comport Settings
-    
+
     void OnManualFlowsystem(wxCommandEvent& event); //
+
     wxDECLARE_EVENT_TABLE();             // ประกาศ Event Table
 };
 
@@ -44,6 +54,13 @@ public:
     ComportSettingsDialog(wxWindow *parent);
 private:
     std::vector<std::string> FetchAvailablePorts(); // ฟังก์ชันสำหรับดึงพอร์ตที่สามารถใช้ได้
+
+    void InitSerial(const std::string& port);
+
+    // ตัวแปรสำหรับเก็บพอร์ตที่เลือก
+    std::string selectedBleAgentPort;
+    std::string selectedModbusPort;
+    std::string selectedPowerSupplyPort;
 
 };
 
@@ -75,11 +92,18 @@ MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size)
 
     this->SetMinSize(this->FromDIP(wxSize(200, 200)));
     this->SetSize(this->FromDIP(wxSize(500, 200)));
+
+    this->Center();
 }
 
 void MyFrame::OnComportSettings(wxCommandEvent& WXUNUSED(event)) {
     ComportSettingsDialog dialog(this);
     dialog.ShowModal();
+}
+
+void ComportSettingsDialog::InitSerial(const string& port ){
+    io_service io;
+    serial_port serial = init_serial_port(io, port);
 }
 
 ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
@@ -130,6 +154,23 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     wxButton *okButton = new wxButton(this, wxID_OK, "OK");
     mainSizer->Add(okButton, 0, wxALL | wxALIGN_CENTER, 10);
 
+    // เพิ่มการจัดการปุ่ม OK
+    okButton->Bind(wxEVT_BUTTON, [this, bleAgentChoice, modbusChoice, powerSupplyChoice](wxCommandEvent& event) {
+        // บันทึกพอร์ตที่เลือก
+        selectedBleAgentPort = bleAgentChoice->GetStringSelection().ToStdString();
+        selectedModbusPort = modbusChoice->GetStringSelection().ToStdString();
+        selectedPowerSupplyPort = powerSupplyChoice->GetStringSelection().ToStdString();
+
+        // แสดงผลหรือใช้พอร์ตที่เลือกตามต้องการ
+        wxLogMessage("BLEAgent Port: %s", selectedBleAgentPort);
+        wxLogMessage("Modbus Port: %s", selectedModbusPort);
+        wxLogMessage("Power Supply Port: %s", selectedPowerSupplyPort);
+
+        InitSerial(selectedPowerSupplyPort);
+        // ปิด Dialog
+        this->EndModal(wxID_OK);
+    });
+
     SetSizer(mainSizer);
     Layout();
 }
@@ -143,6 +184,7 @@ ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
 
     // Set Flow Row
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "Set Flow:"), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
+    wxIntegerValidator<int> intValidator; // Validator for integer input
     wxTextCtrl *setFlowInput = new wxTextCtrl(this, wxID_ANY);
     gridSizer->Add(setFlowInput, 1, wxEXPAND);
     wxButton *setButton = new wxButton(this, wxID_ANY, "Set");
@@ -151,18 +193,21 @@ ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
     // Ref. Flow Row
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "Ref. Flow:"), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     wxTextCtrl *refFlowInput = new wxTextCtrl(this, wxID_ANY);
+    refFlowInput->SetEditable(false); // Make the field read-only
     gridSizer->Add(refFlowInput, 1, wxEXPAND);
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "m3/h"), 0, wxALIGN_CENTER_VERTICAL);
 
     // Act. Flow Row
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "Act. Flow:"), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     wxTextCtrl *actFlowInput = new wxTextCtrl(this, wxID_ANY);
+    actFlowInput->SetEditable(false); // Make the field read-only
     gridSizer->Add(actFlowInput, 1, wxEXPAND);
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "m3/h"), 0, wxALIGN_CENTER_VERTICAL);
 
     // Error Row
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "Error:"), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     wxTextCtrl *errorInput = new wxTextCtrl(this, wxID_ANY);
+    errorInput->SetEditable(false);
     gridSizer->Add(errorInput, 1, wxEXPAND);
     gridSizer->Add(new wxStaticText(this, wxID_ANY, "%"), 0, wxALIGN_CENTER_VERTICAL);
 
