@@ -19,7 +19,7 @@ find_package(wxWidgets REQUIRED COMPONENTS core base)
 include(${wxWidgets_USE_FILE})
 
 # เพิ่มไฟล์ต้นฉบับ
-add_executable(MyWxApp main.cpp src/modbus_utils.cpp src/serial_utils.cpp src/comport_setting.cpp src/mainwindow_properties.cpp src/manual_calibrate.cpp)
+add_executable(MyWxApp main.cpp src/modbus_utils.cpp src/serial_utils.cpp src/comport_setting.cpp src/mainwindow_properties.cpp src/manual_calibrate.cpp src/pid_calculator.cpp)
 
 # ลิงก์ wxWidgets
 target_link_libraries(MyWxApp ${wxWidgets_LIBRARIES} boost_system modbus)
