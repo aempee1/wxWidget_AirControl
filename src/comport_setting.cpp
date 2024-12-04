@@ -14,6 +14,68 @@
 #include <regex>
 #endif
 
+boost::asio::serial_port ComportSettingsDialog::init_serial_port(boost::asio::io_service& io, const std::string& port_name)
+{
+    boost::asio::serial_port serial(io, port_name);
+    serial.set_option(boost::asio::serial_port_base::baud_rate(9600));
+    serial.set_option(boost::asio::serial_port_base::character_size(8));
+    serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+    serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+    serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+
+    if (!serial.is_open())
+    {
+        cerr << "Failed to open serial port!" << endl;
+        throw runtime_error("Failed to open serial port");
+    }
+
+    cout << "Serial port connected." << endl;
+    return serial;
+}
+
+modbus_t* ComportSettingsDialog::InitialModbus(const char* modbus_port) {
+    modbus_t* ctx = initialize_modbus(modbus_port);
+    if (ctx == nullptr) {
+        std::cerr << "Error initializing Modbus on port: " << modbus_port << std::endl;
+        return nullptr;
+    }
+    std::cout << "Successfully initialized Modbus on port: " << modbus_port << std::endl;
+    return ctx;
+}
+
+
+std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
+    std::vector<std::string> ports;
+
+#ifdef _WIN32
+    char portName[10];
+    for (int i = 1; i <= 256; ++i) {
+        snprintf(portName, sizeof(portName), "COM%d", i);
+        HANDLE hPort = CreateFileA(portName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hPort != INVALID_HANDLE_VALUE) {
+            ports.push_back(portName);
+            CloseHandle(hPort);
+        }
+    }
+#endif
+
+#ifdef __APPLE__
+    DIR *dir = opendir("/dev");
+    if (dir) {
+        struct dirent *entry;
+        std::regex serialRegex("^tty\\..*"); // พอร์ต serial บน macOS มักจะขึ้นต้นด้วย "cu."
+        while ((entry = readdir(dir)) != NULL) {
+            if (std::regex_match(entry->d_name, serialRegex)) {
+                ports.push_back("/dev/" + std::string(entry->d_name));
+            }
+        }
+        closedir(dir);
+    }
+#endif
+
+    return ports;
+}
+
 ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     : wxDialog(parent, wxID_ANY, "Comport Settings", wxDefaultPosition, wxSize(500, 200), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
@@ -82,7 +144,8 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
         wxLogError("Failed to initialize Modbus.");
     }
 
-    serial_port power_supply_Context = InitSerial(selectedPowerSupplyPort);
+    io_service io ;
+    serial_port serial = init_serial_port(io, selectedPowerSupplyPort);
 
 
         // ปิด Dialog
@@ -93,52 +156,4 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     Layout();
 }
 
-boost::asio::serial_port ComportSettingsDialog::InitSerial(const string& port ){
-    io_service io;
-    serial_port serial = init_serial_port(io, port);
 
-    return serial ;
-}
-
-modbus_t* ComportSettingsDialog::InitialModbus(const char* modbus_port) {
-    modbus_t* ctx = initialize_modbus(modbus_port);
-    if (ctx == nullptr) {
-        std::cerr << "Error initializing Modbus on port: " << modbus_port << std::endl;
-        return nullptr;
-    }
-    std::cout << "Successfully initialized Modbus on port: " << modbus_port << std::endl;
-    return ctx;
-}
-
-
-std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
-    std::vector<std::string> ports;
-
-#ifdef _WIN32
-    char portName[10];
-    for (int i = 1; i <= 256; ++i) {
-        snprintf(portName, sizeof(portName), "COM%d", i);
-        HANDLE hPort = CreateFileA(portName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-        if (hPort != INVALID_HANDLE_VALUE) {
-            ports.push_back(portName);
-            CloseHandle(hPort);
-        }
-    }
-#endif
-
-#ifdef __APPLE__
-    DIR *dir = opendir("/dev");
-    if (dir) {
-        struct dirent *entry;
-        std::regex serialRegex("^tty\\..*"); // พอร์ต serial บน macOS มักจะขึ้นต้นด้วย "cu."
-        while ((entry = readdir(dir)) != NULL) {
-            if (std::regex_match(entry->d_name, serialRegex)) {
-                ports.push_back("/dev/" + std::string(entry->d_name));
-            }
-        }
-        closedir(dir);
-    }
-#endif
-
-    return ports;
-}
