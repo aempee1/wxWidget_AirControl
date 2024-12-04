@@ -3,6 +3,7 @@
 #include <vector>
 #include "comport_setting.hpp"
 #include "serial_utils.hpp"
+#include "modbus_utils.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -73,18 +74,40 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
         wxLogMessage("Modbus Port: %s", selectedModbusPort);
         wxLogMessage("Power Supply Port: %s", selectedPowerSupplyPort);
 
-        InitSerial(selectedPowerSupplyPort);
+        modbus_t* modbusContext = InitialModbus(selectedModbusPort.c_str());
+    if (modbusContext) {
+        wxLogMessage("Modbus initialized successfully.");
+        // สามารถใช้ modbusContext ต่อไปได้ที่นี่
+    } else {
+        wxLogError("Failed to initialize Modbus.");
+    }
+
+    serial_port power_supply_Context = InitSerial(selectedPowerSupplyPort);
+
+
         // ปิด Dialog
-        this->EndModal(wxID_OK);
+    this->EndModal(wxID_OK);
     });
 
     SetSizer(mainSizer);
     Layout();
 }
 
-void ComportSettingsDialog::InitSerial(const string& port ){
+boost::asio::serial_port ComportSettingsDialog::InitSerial(const string& port ){
     io_service io;
     serial_port serial = init_serial_port(io, port);
+
+    return serial ;
+}
+
+modbus_t* ComportSettingsDialog::InitialModbus(const char* modbus_port) {
+    modbus_t* ctx = initialize_modbus(modbus_port);
+    if (ctx == nullptr) {
+        std::cerr << "Error initializing Modbus on port: " << modbus_port << std::endl;
+        return nullptr;
+    }
+    std::cout << "Successfully initialized Modbus on port: " << modbus_port << std::endl;
+    return ctx;
 }
 
 

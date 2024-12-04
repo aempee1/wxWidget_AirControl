@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <boost/asio.hpp>
+#include "modbus_utils.hpp"
 
 using namespace std;
 using namespace boost::asio;
@@ -18,7 +19,10 @@ public:
 private:
     std::vector<std::string> FetchAvailablePorts(); // ฟังก์ชันสำหรับดึงพอร์ตที่สามารถใช้ได้
 
-    void InitSerial(const std::string& port);
+
+    boost::asio::serial_port InitSerial(const std::string& port);
+    modbus_t* InitialModbus(const char* modbus_port);
+
 
     // ตัวแปรสำหรับเก็บพอร์ตที่เลือก
     std::string selectedBleAgentPort;
