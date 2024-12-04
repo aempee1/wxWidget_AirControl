@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(MyWxApp)
 
 # กำหนดไดเรกทอรีที่เก็บไฟล์ .cpp และ .hpp
-include_directories(./Utils /opt/homebrew/include)
+include_directories( /opt/homebrew/include ./include)
 
 # กำหนดไลบรารีที่ต้องการ
 link_directories(/opt/homebrew/lib)
@@ -19,7 +19,7 @@ find_package(wxWidgets REQUIRED COMPONENTS core base)
 include(${wxWidgets_USE_FILE})
 
 # เพิ่มไฟล์ต้นฉบับ
-add_executable(MyWxApp src/main.cpp Utils/modbus_utils.cpp Utils/serial_utils.cpp )
+add_executable(MyWxApp main.cpp src/modbus_utils.cpp src/serial_utils.cpp src/comport_setting.cpp src/mainwindow_properties.cpp)
 
 # ลิงก์ wxWidgets
 target_link_libraries(MyWxApp ${wxWidgets_LIBRARIES} boost_system modbus)
