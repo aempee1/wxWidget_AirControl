@@ -4,6 +4,8 @@
 #include "comport_setting.hpp"
 #include "serial_utils.hpp"
 #include "modbus_utils.hpp"
+#include <fstream>
+
 
 #ifdef _WIN32
 #include <windows.h>
@@ -76,11 +78,30 @@ std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
     return ports;
 }
 
+void ComportSettingsDialog::SaveSelectedPorts() {
+    std::ofstream outFile("selected_ports.txt");
+    outFile << selectedBleAgentPort << std::endl;
+    outFile << selectedModbusPort << std::endl;
+    outFile << selectedPowerSupplyPort << std::endl;
+    outFile.close();
+}
+
+void ComportSettingsDialog::LoadSelectedPorts() {
+    std::ifstream inFile("selected_ports.txt");
+    if (inFile) {
+        std::getline(inFile, selectedBleAgentPort);
+        std::getline(inFile, selectedModbusPort);
+        std::getline(inFile, selectedPowerSupplyPort);
+        inFile.close();
+    }
+}
+
 ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     : wxDialog(parent, wxID_ANY, "Comport Settings", wxDefaultPosition, wxSize(500, 200), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
-    wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
+    LoadSelectedPorts();  // โหลดพอร์ตที่เลือกจากไฟล์เมื่อเปิด Dialog
 
+    wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
     wxFlexGridSizer *gridSizer = new wxFlexGridSizer(3, 2, 10, 10);
 
     auto availablePorts = FetchAvailablePorts();
@@ -91,7 +112,9 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     for (const auto& port : availablePorts) {
         bleAgentChoice->Append(port);
     }
-    if (!availablePorts.empty()) {
+    if (!availablePorts.empty() && !selectedBleAgentPort.empty()) {
+        bleAgentChoice->SetStringSelection(selectedBleAgentPort);
+    } else {
         bleAgentChoice->SetSelection(0);
     }
     gridSizer->Add(bleAgentChoice, 1, wxALIGN_CENTER_HORIZONTAL);
@@ -102,7 +125,9 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     for (const auto& port : availablePorts) {
         modbusChoice->Append(port);
     }
-    if (!availablePorts.empty()) {
+    if (!availablePorts.empty() && !selectedModbusPort.empty()) {
+        modbusChoice->SetStringSelection(selectedModbusPort);
+    } else {
         modbusChoice->SetSelection(0);
     }
     gridSizer->Add(modbusChoice, 1, wxALIGN_CENTER_HORIZONTAL);
@@ -113,7 +138,9 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     for (const auto& port : availablePorts) {
         powerSupplyChoice->Append(port);
     }
-    if (!availablePorts.empty()) {
+    if (!availablePorts.empty() && !selectedPowerSupplyPort.empty()) {
+        powerSupplyChoice->SetStringSelection(selectedPowerSupplyPort);
+    } else {
         powerSupplyChoice->SetSelection(0);
     }
     gridSizer->Add(powerSupplyChoice, 1, wxALIGN_CENTER_HORIZONTAL);
@@ -124,36 +151,37 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
     wxButton *okButton = new wxButton(this, wxID_OK, "OK");
     mainSizer->Add(okButton, 0, wxALL | wxALIGN_CENTER, 10);
 
-    // เพิ่มการจัดการปุ่ม OK
+    // การจัดการปุ่ม OK
     okButton->Bind(wxEVT_BUTTON, [this, bleAgentChoice, modbusChoice, powerSupplyChoice](wxCommandEvent& event) {
         // บันทึกพอร์ตที่เลือก
         selectedBleAgentPort = bleAgentChoice->GetStringSelection().ToStdString();
         selectedModbusPort = modbusChoice->GetStringSelection().ToStdString();
         selectedPowerSupplyPort = powerSupplyChoice->GetStringSelection().ToStdString();
 
+        // บันทึกค่าพอร์ตที่เลือก
+        SaveSelectedPorts();
+
+        // การเชื่อมต่อ Serial และ Modbus
+        boost::asio::io_service io;
+        boost::asio::serial_port serial = init_serial_port(io, selectedPowerSupplyPort);
+        modbus_t* modbusContext = InitialModbus(selectedModbusPort.c_str());
+
         // แสดงผลหรือใช้พอร์ตที่เลือกตามต้องการ
         wxLogMessage("BLEAgent Port: %s", selectedBleAgentPort);
         wxLogMessage("Modbus Port: %s", selectedModbusPort);
         wxLogMessage("Power Supply Port: %s", selectedPowerSupplyPort);
 
-        modbus_t* modbusContext = InitialModbus(selectedModbusPort.c_str());
-    if (modbusContext) {
-        wxLogMessage("Modbus initialized successfully.");
-        // สามารถใช้ modbusContext ต่อไปได้ที่นี่
-    } else {
-        wxLogError("Failed to initialize Modbus.");
-    }
-
-    io_service io ;
-    serial_port serial = init_serial_port(io, selectedPowerSupplyPort);
-
+        if (modbusContext) {
+            wxLogMessage("Modbus and Serial initialized successfully.");
+        } else {
+            wxLogError("Failed to initialize Modbus.");
+        }
 
         // ปิด Dialog
-    this->EndModal(wxID_OK);
+        this->EndModal(wxID_OK);
     });
 
     SetSizer(mainSizer);
     Layout();
 }
-
 

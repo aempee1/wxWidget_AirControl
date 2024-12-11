@@ -20,11 +20,12 @@ public:
 private:
     std::vector<std::string> FetchAvailablePorts(); // ฟังก์ชันสำหรับดึงพอร์ตที่สามารถใช้ได้
 
-
     // boost::asio::serial_port InitSerial(const std::string& port);
     boost::asio::serial_port init_serial_port(boost::asio::io_service& io, const std::string& port_name);
     modbus_t* InitialModbus(const char* modbus_port);
 
+    void SaveSelectedPorts();
+    void LoadSelectedPorts();
 
     // ตัวแปรสำหรับเก็บพอร์ตที่เลือก
     std::string selectedBleAgentPort;
