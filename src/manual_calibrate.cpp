@@ -1,11 +1,31 @@
 #include "manual_calibrate.hpp"
+#include "serial_utils.hpp"
 #include <fstream>
 #include <string>
 #include <tuple>
 #include <stdexcept>
-
+#include <iostream>
 using namespace std;
 using namespace boost::asio;
+
+// เพิ่มค่าเริ่มต้นของ PID Controller
+const double Kp = 0.04;
+const double Ki = 0.55;
+const double Kd = 0.00;
+
+double integral = 0.0;
+double previousError = 0.0;
+
+io_service io ;
+double ManualCalibrationDialog::calculatePID(double setpointValue, double currentValue) {
+    double errorValue = setpointValue - currentValue;
+    integral += errorValue;
+    double derivativeValue = errorValue - previousError;
+    previousError = errorValue;
+
+    double PID_output = (Kp * errorValue) + (Ki * integral) + (Kd * derivativeValue);
+    return PID_output;
+}
 
 boost::asio::serial_port ManualCalibrationDialog::init_serial_port(boost::asio::io_service& io, const std::string& port_name)
 {
@@ -21,18 +41,12 @@ boost::asio::serial_port ManualCalibrationDialog::init_serial_port(boost::asio::
         cerr << "Failed to open serial port!" << endl;
         throw runtime_error("Failed to open serial port");
     }
-
-    cout << "Serial port connected." << endl;
+    std::cout << "Successfully initialized serial on port: " << port_name << std::endl;
     return serial;
 }
 
 modbus_t* ManualCalibrationDialog::InitialModbus(const char* modbus_port) {
     modbus_t* ctx = initialize_modbus(modbus_port);
-    if (ctx == nullptr) {
-        std::cerr << "Error initializing Modbus on port: " << modbus_port << std::endl;
-        return nullptr;
-    }
-    std::cout << "Successfully initialized Modbus on port: " << modbus_port << std::endl;
     return ctx;
 }
 
@@ -78,7 +92,7 @@ bool ManualCalibrationDialog::CheckAndLoadPorts(const std::string& fileName, std
 
 ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
     : wxDialog(parent, wxID_ANY, "Manual Calibration", wxDefaultPosition, wxSize(400, 300), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
-      setpoint(0), timer(new wxTimer(this)) , modbusCtx(nullptr) // กำหนดค่าเริ่มต้นให้ timer
+      setpoint(0), timer(new wxTimer(this)) , modbusCtx(nullptr) , serialCtx(io)  // กำหนดค่าเริ่มต้นให้ timer
 {
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
     wxFlexGridSizer *gridSizer = new wxFlexGridSizer(4, 3, 10, 10);
@@ -149,7 +163,10 @@ ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
         return;
     }
 
-    std::cout << "Modbus initialized successfully." << std::endl;
+    // Initialize Serial Port (เรียกใช้ฟังก์ชัน init_serial_port)
+    serialCtx = init_serial_port(io, selectedPorts[2].c_str());
+
+    std::cout << "Modbus and Serial port are initialized successfully." << std::endl;
 
 }
 
@@ -160,6 +177,9 @@ ManualCalibrationDialog::~ManualCalibrationDialog() {
     if (modbusCtx) {
         modbus_close(modbusCtx);
         modbus_free(modbusCtx);
+    }
+    if (serialCtx.is_open()) {
+        serialCtx.close();
     }
     delete timer;
 }
@@ -185,6 +205,7 @@ void ManualCalibrationDialog::OnTimer(wxTimerEvent &event) {
         return;
     }
 
+
     uint16_t refFlow[4] ;
     int rc ;
     do{
@@ -195,16 +216,30 @@ void ManualCalibrationDialog::OnTimer(wxTimerEvent &event) {
     }while(rc == -1);
     float refFlowValue ;
     memcpy(&refFlowValue , refFlow, sizeof(refFlowValue));
-
     // อัปเดตค่า refFlow
     refFlowInput->SetValue(wxString::Format("%2f", refFlowValue));
 
-    // สุ่มค่าอื่น (ตามตัวอย่างเดิม)
-    int randomActFlow = std::rand() % 100; // สุ่มเลข 0-99
-    int randomError = std::rand() % 100;   // สุ่มเลข 0-99
+    // คำนวณค่า Act. Flow โดยใช้ PID
+    double pidOutput = calculatePID(setpoint, static_cast<double>(refFlowValue));
+    if(pidOutput >= 40){
+        pidOutput = 40 ;
+    }else if(pidOutput <= 0){
+        pidOutput = 0 ;
+    }
 
-    actFlowInput->SetValue(wxString::Format("%d", randomActFlow));
-    errorInput->SetValue(wxString::Format("%d", randomError));
+    // อัปเดตค่าที่คำนวณได้
+    //actFlowInput->SetValue(wxString::Format("%.2f", pidOutput));
+
+    // คำนวณ Error
+    double errorValue = setpoint - refFlowValue;
+    errorInput->SetValue(wxString::Format("%.2f", errorValue));
+
+    if (!serialCtx.is_open()) {
+    cerr << "Failed to open serial port!" << endl;
+    throw runtime_error("Failed to open serial port");
+    }else{
+        set_voltage(serialCtx,pidOutput);
+    }
 }
 
 // Bind Event Table

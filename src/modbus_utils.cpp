@@ -46,7 +46,7 @@ modbus_t* initialize_modbus(const char* device)
         return nullptr;
     }
 
-    std::cout << "Modbus Connected" << std::endl;
+    std::cout << "Successfully initialized serial on port: " << device << std::endl;
 
     return ctx;
 }
