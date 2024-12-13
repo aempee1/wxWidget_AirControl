@@ -5,12 +5,13 @@
 #include <boost/asio.hpp>
 #include <vector>
 
-void send_scpi_command(boost::asio::serial_port& serial, const std::string& command, std::string& response , bool expect_response = true);
-void set_voltage(boost::asio::serial_port& serial, double voltage);
-void set_current(boost::asio::serial_port& serial, double current);
+using namespace std;
+using namespace boost::asio;
 
-std::vector<std::string> list_ports();
-int select_port(const std::vector<std::string>& available_ports);
-boost::asio::serial_port init_serial_port(boost::asio::io_service& io, const std::string& port_name);
+void send_scpi_command(serial_port& serial, const string& command, string& response , bool expect_response = true);
+void set_voltage(serial_port& serial, double voltage);
+void set_current(serial_port& serial, double current);
+
+
 
 #endif // SERIAL_UTILS_HPP
