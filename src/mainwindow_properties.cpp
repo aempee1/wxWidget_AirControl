@@ -2,6 +2,7 @@
 #include "mainwindow_properties.hpp"
 #include <wx/aboutdlg.h>  // สำหรับ wxAboutDialogInfo
 #include <wx/button.h>
+#include <wx/image.h> // จำเป็นสำหรับ wxInitAllImageHandlers()
 #include <wx/sizer.h>
 
 
@@ -64,9 +65,24 @@ void MyFrame::SetupMainMenu() {
 //----------------------------------------------------------------
 // ฟังก์ชันจัดการคลิกเมนู About
 void MyFrame::OnAboutSoftware(wxCommandEvent& WXUNUSED(event)) {
-    wxDialog *aboutDialog = new wxDialog(this, wxID_ANY, "About", wxDefaultPosition, wxSize(300, 200), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    wxInitAllImageHandlers(); // เรียกใช้งาน Image Handlers
+    wxDialog *aboutDialog = new wxDialog(this, wxID_ANY, "About", wxDefaultPosition, wxSize(350, 400), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
 
     wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
+
+    // โหลดรูปภาพและปรับขนาด
+    wxImage image(wxT("media/SutoLogo.png"), wxBITMAP_TYPE_PNG);
+    if (!image.IsOk()) {
+        wxMessageBox("Failed to load image!", "Error", wxICON_ERROR);
+        return;
+    }
+    image.Rescale(100, 100); // ปรับขนาดรูปภาพให้เป็น 100x100 พิกเซล
+
+    // แปลง wxImage เป็น wxBitmap
+    wxBitmap resizedBitmap(image);
+    wxStaticBitmap *imageCtrl = new wxStaticBitmap(aboutDialog, wxID_ANY, resizedBitmap);
+    mainSizer->Add(imageCtrl, 0, wxALL | wxALIGN_CENTER, 10);
+
 
     // สร้าง GridSizer สำหรับข้อมูล 2 คอลัมน์และ 5 แถว
     wxGridSizer *gridSizer = new wxGridSizer(5, 2, 5, 0); // 5 แถว, 2 คอลัมน์, ระยะห่างระหว่างแถวและคอลัมน์
@@ -85,7 +101,7 @@ void MyFrame::OnAboutSoftware(wxCommandEvent& WXUNUSED(event)) {
     gridSizer->Add(new wxStaticText(aboutDialog, wxID_ANY, "M"), 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
 
     gridSizer->Add(new wxStaticText(aboutDialog, wxID_ANY, "Email :"), 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
-    gridSizer->Add(new wxStaticText(aboutDialog, wxID_ANY, "example@abc.com"), 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+    gridSizer->Add(new wxStaticText(aboutDialog, wxID_ANY, "khamae19499@gmail.com"), 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
 
     // เพิ่ม GridSizer ลงใน MainSizer
     mainSizer->Add(gridSizer, 1, wxALL | wxEXPAND, 10);
@@ -97,7 +113,6 @@ void MyFrame::OnAboutSoftware(wxCommandEvent& WXUNUSED(event)) {
     aboutDialog->SetSizer(mainSizer);
     aboutDialog->Layout();
     aboutDialog->ShowModal();
-
     aboutDialog->Destroy();
 }
 

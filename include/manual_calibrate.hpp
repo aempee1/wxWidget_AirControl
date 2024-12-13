@@ -17,26 +17,24 @@ public:
     ManualCalibrationDialog(wxWindow *parent);
     ~ManualCalibrationDialog();
     void OnSetButtonClick(wxCommandEvent &event); // ฟังก์ชัน event handler
-
     double calculatePID(double setpointValue, double currentValue);
     wxDECLARE_EVENT_TABLE();
 
 private:
+    bool CheckAndLoadPorts(const string& fileName, vector<string>& ports);
 
-    wxTimer *timer; // Timer สำหรับสุ่มค่า
-
-    modbus_t* modbusCtx; // เพิ่มตัวแปรนี้เป็นสมาชิกของคลาส
-
-    serial_port serialCtx;
+    wxTimer *timer; // Timer
     void OnTimer(wxTimerEvent &event); // Handler สำหรับ Timer
+
+    modbus_t* modbusCtx;
+    serial_port serialCtx;
+
     serial_port InitialSerial(io_service& io, const string& port_name);
     modbus_t* InitialModbus(const char* modbus_port);
 
-    bool CheckAndLoadPorts(const string& fileName, vector<string>& ports);
-
 protected:
-    int setpoint;
 
+    int setpoint ;
     wxTextCtrl *setFlowInput;
     wxTextCtrl *refFlowInput;
     wxTextCtrl *actFlowInput;

@@ -13,11 +13,8 @@ public:
 private:
     void SetupMainMenu();                // ฟังก์ชันสำหรับสร้างเมนู
     void OnAboutSoftware(wxCommandEvent& event); // ฟังก์ชันสำหรับจัดการคลิกเมนู About
-
     void OnComportSettings(wxCommandEvent& event); // ฟังก์ชันสำหรับจัดการคลิกเมนู Comport Settings
-
     void OnManualFlowsystem(wxCommandEvent& event); //
-
     wxDECLARE_EVENT_TABLE();             // ประกาศ Event Table
 };
 

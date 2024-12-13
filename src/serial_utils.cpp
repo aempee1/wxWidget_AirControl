@@ -5,10 +5,8 @@
 #include <chrono>
 #include <cstdio>
 
-
 using namespace std;
 using namespace boost::asio;
-
 
 void send_scpi_command(serial_port& serial, const string& command, string& response, bool expect_response ) {
     if (!serial.is_open()) {

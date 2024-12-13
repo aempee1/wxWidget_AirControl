@@ -43,7 +43,6 @@ modbus_t* ComportSettingsDialog::InitialModbus(const char* modbus_port) {
     return ctx;
 }
 
-
 vector<string> ComportSettingsDialog::FetchAvailablePorts() {
     vector<string> ports;
 

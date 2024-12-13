@@ -19,7 +19,6 @@ public:
 
 private:
     vector<string> FetchAvailablePorts(); // ฟังก์ชันสำหรับดึงพอร์ตที่สามารถใช้ได้
-
     serial_port InitialSerial(io_service& io, const string& port_name);
     modbus_t* InitialModbus(const char* modbus_port);
 

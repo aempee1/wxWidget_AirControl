@@ -17,8 +17,8 @@ const double Kd = 0.00;
 double integral = 0.0;
 double previousError = 0.0;
 //-----------------------------
-
 io_service io ;
+
 double ManualCalibrationDialog::calculatePID(double setpointValue, double currentValue) {
     double errorValue = setpointValue - currentValue;
     integral += errorValue;
