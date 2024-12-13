@@ -16,14 +16,17 @@
 #include <regex>
 #endif
 
-boost::asio::serial_port ComportSettingsDialog::init_serial_port(boost::asio::io_service& io, const std::string& port_name)
+using namespace std;
+using namespace boost::asio;
+
+serial_port ComportSettingsDialog::InitialSerial(io_service& io, const string& port_name)
 {
-    boost::asio::serial_port serial(io, port_name);
-    serial.set_option(boost::asio::serial_port_base::baud_rate(9600));
-    serial.set_option(boost::asio::serial_port_base::character_size(8));
-    serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
-    serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-    serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+    serial_port serial(io, port_name);
+    serial.set_option(serial_port_base::baud_rate(9600));
+    serial.set_option(serial_port_base::character_size(8));
+    serial.set_option(serial_port_base::parity(serial_port_base::parity::none));
+    serial.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
+    serial.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
 
     if (!serial.is_open())
     {
@@ -31,23 +34,18 @@ boost::asio::serial_port ComportSettingsDialog::init_serial_port(boost::asio::io
         throw runtime_error("Failed to open serial port");
     }
 
-    cout << "Serial port connected." << endl;
+    cout << "Successfully initialized Serial on port: " << port_name << endl;
     return serial;
 }
 
 modbus_t* ComportSettingsDialog::InitialModbus(const char* modbus_port) {
     modbus_t* ctx = initialize_modbus(modbus_port);
-    if (ctx == nullptr) {
-        std::cerr << "Error initializing Modbus on port: " << modbus_port << std::endl;
-        return nullptr;
-    }
-    std::cout << "Successfully initialized Modbus on port: " << modbus_port << std::endl;
     return ctx;
 }
 
 
-std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
-    std::vector<std::string> ports;
+vector<string> ComportSettingsDialog::FetchAvailablePorts() {
+    vector<string> ports;
 
 #ifdef _WIN32
     char portName[10];
@@ -65,10 +63,10 @@ std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
     DIR *dir = opendir("/dev");
     if (dir) {
         struct dirent *entry;
-        std::regex serialRegex("^tty\\..*"); // พอร์ต serial บน macOS มักจะขึ้นต้นด้วย "cu."
+        regex serialRegex("^tty\\..*"); // พอร์ต serial บน macOS มักจะขึ้นต้นด้วย "cu."
         while ((entry = readdir(dir)) != NULL) {
-            if (std::regex_match(entry->d_name, serialRegex)) {
-                ports.push_back("/dev/" + std::string(entry->d_name));
+            if (regex_match(entry->d_name, serialRegex)) {
+                ports.push_back("/dev/" + string(entry->d_name));
             }
         }
         closedir(dir);
@@ -79,19 +77,19 @@ std::vector<std::string> ComportSettingsDialog::FetchAvailablePorts() {
 }
 
 void ComportSettingsDialog::SaveSelectedPorts() {
-    std::ofstream outFile("selected_ports.txt");
-    outFile << selectedBleAgentPort << std::endl;
-    outFile << selectedModbusPort << std::endl;
-    outFile << selectedPowerSupplyPort << std::endl;
+    ofstream outFile("selected_ports.txt");
+    outFile << selectedBleAgentPort << endl;
+    outFile << selectedModbusPort << endl;
+    outFile << selectedPowerSupplyPort << endl;
     outFile.close();
 }
 
 void ComportSettingsDialog::LoadSelectedPorts() {
-    std::ifstream inFile("selected_ports.txt");
+    ifstream inFile("selected_ports.txt");
     if (inFile) {
-        std::getline(inFile, selectedBleAgentPort);
-        std::getline(inFile, selectedModbusPort);
-        std::getline(inFile, selectedPowerSupplyPort);
+        getline(inFile, selectedBleAgentPort);
+        getline(inFile, selectedModbusPort);
+        getline(inFile, selectedPowerSupplyPort);
         inFile.close();
     }
 }
@@ -162,8 +160,8 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
         SaveSelectedPorts();
 
         // การเชื่อมต่อ Serial และ Modbus
-        boost::asio::io_service io;
-        boost::asio::serial_port serial = init_serial_port(io, selectedPowerSupplyPort);
+        io_service io;
+        serial_port serial = InitialSerial(io, selectedPowerSupplyPort.c_str());
         modbus_t* modbusContext = InitialModbus(selectedModbusPort.c_str());
 
         // แสดงผลหรือใช้พอร์ตที่เลือกตามต้องการ
@@ -176,7 +174,6 @@ ComportSettingsDialog::ComportSettingsDialog(wxWindow *parent)
         } else {
             wxLogError("Failed to initialize Modbus.");
         }
-
         // ปิด Dialog
         this->EndModal(wxID_OK);
     });
