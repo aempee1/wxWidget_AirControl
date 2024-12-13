@@ -5,16 +5,18 @@
 #include <tuple>
 #include <stdexcept>
 #include <iostream>
+
 using namespace std;
 using namespace boost::asio;
 
-// เพิ่มค่าเริ่มต้นของ PID Controller
+// เพิ่มค่าเริ่มต้นของ PID Controller 
 const double Kp = 0.04;
 const double Ki = 0.55;
 const double Kd = 0.00;
 
 double integral = 0.0;
 double previousError = 0.0;
+//-----------------------------
 
 io_service io ;
 double ManualCalibrationDialog::calculatePID(double setpointValue, double currentValue) {
@@ -27,21 +29,21 @@ double ManualCalibrationDialog::calculatePID(double setpointValue, double curren
     return PID_output;
 }
 
-boost::asio::serial_port ManualCalibrationDialog::init_serial_port(boost::asio::io_service& io, const std::string& port_name)
+serial_port ManualCalibrationDialog::InitialSerial(io_service& io, const string& port_name)
 {
-    boost::asio::serial_port serial(io, port_name);
-    serial.set_option(boost::asio::serial_port_base::baud_rate(9600));
-    serial.set_option(boost::asio::serial_port_base::character_size(8));
-    serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
-    serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-    serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+    serial_port serial(io, port_name);
+    serial.set_option(serial_port_base::baud_rate(9600));
+    serial.set_option(serial_port_base::character_size(8));
+    serial.set_option(serial_port_base::parity(serial_port_base::parity::none));
+    serial.set_option(serial_port_base::stop_bits(serial_port_base::stop_bits::one));
+    serial.set_option(serial_port_base::flow_control(serial_port_base::flow_control::none));
 
     if (!serial.is_open())
     {
         cerr << "Failed to open serial port!" << endl;
         throw runtime_error("Failed to open serial port");
     }
-    std::cout << "Successfully initialized serial on port: " << port_name << std::endl;
+    cout << "Successfully initialized Serial on port: " << port_name << endl;
     return serial;
 }
 
@@ -50,33 +52,33 @@ modbus_t* ManualCalibrationDialog::InitialModbus(const char* modbus_port) {
     return ctx;
 }
 
-std::tuple<std::string, std::string, std::string> ReadPortsFromFile(const std::string& fileName) {
-    std::ifstream file(fileName);
+tuple<string, string, string> ReadPortsFromFile(const string& fileName) {
+    ifstream file(fileName);
     if (!file.is_open()) {
-        throw std::runtime_error("Unable to open the port configuration file."); // โยนข้อผิดพลาดหากเปิดไฟล์ไม่ได้
+        throw runtime_error("Unable to open the port configuration file."); // โยนข้อผิดพลาดหากเปิดไฟล์ไม่ได้
     }
 
-    std::string bluetoothPort, modbusPort, serialPort;
-    std::getline(file, bluetoothPort);
-    std::getline(file, modbusPort);
-    std::getline(file, serialPort);
+    string bluetoothPort, modbusPort, serialPort;
+    getline(file, bluetoothPort);
+    getline(file, modbusPort);
+    getline(file, serialPort);
 
     if (bluetoothPort.empty() || modbusPort.empty() || serialPort.empty()) {
-        throw std::runtime_error("The port configuration file must contain at least 3 lines."); // โยนข้อผิดพลาดหากข้อมูลไม่ครบ
+        throw runtime_error("The port configuration file must contain at least 3 lines."); // โยนข้อผิดพลาดหากข้อมูลไม่ครบ
     }
 
-    return std::make_tuple(bluetoothPort, modbusPort, serialPort); // คืนค่าพอร์ตทั้งหมดในรูปแบบ tuple
+    return make_tuple(bluetoothPort, modbusPort, serialPort); // คืนค่าพอร์ตทั้งหมดในรูปแบบ tuple
 }
 
-bool ManualCalibrationDialog::CheckAndLoadPorts(const std::string& fileName, std::vector<std::string>& ports) {
-    std::ifstream file(fileName);
+bool ManualCalibrationDialog::CheckAndLoadPorts(const string& fileName, vector<string>& ports) {
+    ifstream file(fileName);
     if (!file.is_open()) {
         wxMessageBox("Unable to open the file selected_ports.txt", "Error", wxOK | wxICON_ERROR, this);
         return false;
     }
 
-    std::string port;
-    while (std::getline(file, port)) {
+    string port;
+    while (getline(file, port)) {
         if (!port.empty()) {
             ports.push_back(port);
         }
@@ -143,10 +145,10 @@ ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
     Layout();
     Center();
 
-    std::srand(std::time(nullptr));
+    srand(std::time(nullptr));
 
     // Load ports from file
-    std::vector<std::string> selectedPorts;
+    vector<string> selectedPorts;
     if (!CheckAndLoadPorts("selected_ports.txt", selectedPorts)) {
         return; // หากไม่มีพอร์ตที่เลือกให้หยุดการทำงานของ dialog
     }
@@ -164,9 +166,9 @@ ManualCalibrationDialog::ManualCalibrationDialog(wxWindow *parent)
     }
 
     // Initialize Serial Port (เรียกใช้ฟังก์ชัน init_serial_port)
-    serialCtx = init_serial_port(io, selectedPorts[2].c_str());
+    serialCtx = InitialSerial(io, selectedPorts[2].c_str());
 
-    std::cout << "Modbus and Serial port are initialized successfully." << std::endl;
+    cout << "Modbus and Serial port are initialized successfully." << std::endl;
 
 }
 

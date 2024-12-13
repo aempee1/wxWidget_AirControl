@@ -1,15 +1,17 @@
 #ifndef MANUAL_CALIBRATE_HPP
 #define MANUAL_CALIBRATE_HPP
 
-#include <wx/wx.h> 
+#include <wx/wx.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/valnum.h>
 #include "modbus_utils.hpp"
 #include "serial_utils.hpp"
 
+using namespace std;
+using namespace boost::asio;
 
-std::tuple<std::string, std::string, std::string> ReadPortsFromFile(const std::string& fileName) ;
+tuple<string, string, string> ReadPortsFromFile(const string& fileName) ;
 class ManualCalibrationDialog : public wxDialog {
 public:
     ManualCalibrationDialog(wxWindow *parent);
@@ -25,12 +27,12 @@ private:
 
     modbus_t* modbusCtx; // เพิ่มตัวแปรนี้เป็นสมาชิกของคลาส
 
-    boost::asio::serial_port serialCtx;
+    serial_port serialCtx;
     void OnTimer(wxTimerEvent &event); // Handler สำหรับ Timer
-    boost::asio::serial_port init_serial_port(boost::asio::io_service& io, const std::string& port_name);
+    serial_port InitialSerial(io_service& io, const string& port_name);
     modbus_t* InitialModbus(const char* modbus_port);
 
-    bool CheckAndLoadPorts(const std::string& fileName, std::vector<std::string>& ports);
+    bool CheckAndLoadPorts(const string& fileName, vector<string>& ports);
 
 protected:
     int setpoint;
@@ -41,9 +43,5 @@ protected:
     wxTextCtrl *errorInput;
 
 };
-
-
-
-
 
 #endif // MANUAL_CALIBRATE_HPP
