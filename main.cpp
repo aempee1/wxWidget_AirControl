@@ -10,7 +10,6 @@ public:
     virtual bool OnInit();
 };
 
-
 wxIMPLEMENT_APP(MyApp);
 
 //----------------------------------------------------------------
