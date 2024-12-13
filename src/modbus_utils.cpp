@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <cstring>
 
+using namespace std;
+
 modbus_t* initialize_modbus(const char* device)
 {
     // ค่าคงที่ที่ใช้ในการกำหนดการเชื่อมต่อ Modbus
@@ -16,14 +18,14 @@ modbus_t* initialize_modbus(const char* device)
     modbus_t* ctx = modbus_new_rtu(device, baud_rate, parity, data_bit, stop_bit);
     if (ctx == nullptr)
     {
-        std::cerr << "Failed to create Modbus context." << std::endl;
+        cerr << "Failed to create Modbus context." << endl;
         return nullptr;
     }
 
     // ตั้ง slave ID ของอุปกรณ์
     if (modbus_set_slave(ctx, slave_id) == -1)
     {
-        std::cerr << "Failed to set slave ID: " << modbus_strerror(errno) << std::endl;
+        cerr << "Failed to set slave ID: " << modbus_strerror(errno) << endl;
         modbus_free(ctx);
         return nullptr;
     }
@@ -33,7 +35,7 @@ modbus_t* initialize_modbus(const char* device)
     uint32_t timeout_usec = 0;
     if (modbus_set_response_timeout(ctx, timeout_sec, timeout_usec) == -1)
     {
-        std::cerr << "Failed to set response timeout: " << modbus_strerror(errno) << std::endl;
+        cerr << "Failed to set response timeout: " << modbus_strerror(errno) << endl;
         modbus_free(ctx);
         return nullptr;
     }
@@ -41,12 +43,12 @@ modbus_t* initialize_modbus(const char* device)
     // เปิดการเชื่อมต่อกับอุปกรณ์
     if (modbus_connect(ctx) == -1)
     {
-        std::cerr << "Connection failed: " << modbus_strerror(errno) << std::endl;
+        cerr << "Connection failed: " << modbus_strerror(errno) << endl;
         modbus_free(ctx);
         return nullptr;
     }
 
-    std::cout << "Successfully initialized serial on port: " << device << std::endl;
+    cout << "Successfully initialized serial on port: " << device << endl;
 
     return ctx;
 }
