@@ -11,11 +11,12 @@ using namespace boost::asio;
 
 // เพิ่มค่าเริ่มต้นของ PID Controller 
 const double Kp = 0.04;
-const double Ki = 0.55;
-const double Kd = 0.00;
+const double Ki = 0.01;
+const double Kd = 0.04;
 
 double integral = 0.0;
 double previousError = 0.0;
+double pidOutput = 10;
 //-----------------------------
 io_service io ;
 
@@ -194,7 +195,7 @@ void ManualCalibrationDialog::OnSetButtonClick(wxCommandEvent &event) {
 
         // เริ่มทำงาน timer สำหรับสุ่มค่า
         if (!timer->IsRunning()) {
-            timer->Start(1000); // สุ่มทุก 1 วินาที
+            timer->Start(2000); // สุ่มทุก 1 วินาที
         }
     } else {
         wxMessageBox("Invalid input. Please enter an integer value.", "Error", wxOK | wxICON_ERROR, this);
@@ -202,12 +203,6 @@ void ManualCalibrationDialog::OnSetButtonClick(wxCommandEvent &event) {
 }
 
 void ManualCalibrationDialog::OnTimer(wxTimerEvent &event) {
-    if (!modbusCtx) {
-        wxMessageBox("Modbus context is not initialized.", "Error", wxOK | wxICON_ERROR, this);
-        return;
-    }
-
-
     uint16_t refFlow[4] ;
     int rc ;
     do{
@@ -219,29 +214,26 @@ void ManualCalibrationDialog::OnTimer(wxTimerEvent &event) {
     float refFlowValue ;
     memcpy(&refFlowValue , refFlow, sizeof(refFlowValue));
     // อัปเดตค่า refFlow
-    refFlowInput->SetValue(wxString::Format("%2f", refFlowValue));
-
+    refFlowInput->SetValue(wxString::Format("%.2f", refFlowValue));
     // คำนวณค่า Act. Flow โดยใช้ PID
-    double pidOutput = calculatePID(setpoint, static_cast<double>(refFlowValue));
-    if(pidOutput >= 40){
+    pidOutput += calculatePID(setpoint, refFlowValue);
+    cout << "PID output from calculate " <<pidOutput << endl;
+    if(pidOutput < 10){
+        pidOutput = 10 ;
+    }else if(pidOutput > 40){
         pidOutput = 40 ;
-    }else if(pidOutput <= 0){
-        pidOutput = 0 ;
     }
+    set_voltage(serialCtx,pidOutput);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500)); // หน่วงเวลา 500 ms
 
     // อัปเดตค่าที่คำนวณได้
     //actFlowInput->SetValue(wxString::Format("%.2f", pidOutput));
 
     // คำนวณ Error
-    double errorValue = setpoint - refFlowValue;
-    errorInput->SetValue(wxString::Format("%.2f", errorValue));
+    double errorValue_percentage = 100 - (refFlowValue*100)/setpoint;
+    errorInput->SetValue(wxString::Format("%.2f", errorValue_percentage));
 
-    if (!serialCtx.is_open()) {
-    cerr << "Failed to open serial port!" << endl;
-    throw runtime_error("Failed to open serial port");
-    }else{
-        set_voltage(serialCtx,pidOutput);
-    }
 }
 
 // Bind Event Table

@@ -20,7 +20,7 @@ void send_scpi_command(serial_port& serial, const string& command, string& respo
     // ถ้าคำสั่งไม่ต้องการ response ให้หยุดที่นี่
     if (!expect_response) {
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        cout << "Command sent: " << command << endl;
+        //cout << "Command sent: " << command << endl;
         return;
     }
 
